@@ -1,0 +1,22 @@
+{
+  "name": "radius",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5050"
+  },
+  "dependencies": {
+    "@vueform/slider": "^2.0.8",
+    "vue": "^3.2.29",
+    "vue-yandex-maps": "^0.12.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^2.1.0",
+    "vite": "^2.7.13"
+  },
+  "description": "This template should help get you started developing with Vue 3 in Vite.",
+  "main": "vite.config.js",
+  "author": "",
+  "license": "ISC"
+}
