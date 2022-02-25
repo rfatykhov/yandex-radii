@@ -1,15 +1,6 @@
 <template>
 	<div id="app">
-		<yandex-map ref="map" :coords="[long, lat]" @click="onClickMap" :controls="controls" :zoom="zoom" class="map" :settings="settings">
-			<ymap-marker
-				v-for="n in markers"
-				:key="n.id"
-				:marker-id="n.id"
-				marker-type="placemark"
-				:coords="n.coord"
-				:hint-content="`Координаты: ${n.coord}, радиус: ${n.radius}`"
-				@click="onClickPoint(n)"
-			></ymap-marker>
+		<yandex-map ref="map" :coords="[long, lat]" @click="onClickMap" :controls="controls" :zoom="zoom" class="map" :settings="settings" :behaviors="behaviors">
 			<ymap-marker
 				v-for="n in markers"
 				:key="n.id"
@@ -17,33 +8,11 @@
 				marker-type="circle"
 				:coords="n.coord"
 				:circle-radius="n.radius"
-				@click="onClickPoint(n)"
+				@click="onClickPoint"
+				@contextmenu="onEditPoint"
+				@dblclick="onRemovePoint"
 			></ymap-marker>
 		</yandex-map>
-		<div class="sidebar" v-if="markers.length" id="scroll">
-			<div v-for="n in markers" :key="n.id">
-				<div class="card blink" :class="{ active: n.selected }" :id="n.id">
-					<div class="info">
-						<div @click="onClickPoint(n)" class="inputs">
-							<p>
-								Координаты: <input type="text" :placeholder="n.coord[0]" v-model="n.coord[0]" /><input
-									type="text"
-									:placeholder="n.coord[1]"
-									v-model="n.coord[1]"
-									class="lat"
-								/>
-							</p>
-							<p>Радиус (м): <input type="text" :placeholder="n.radius" v-model="n.radius" /></p>
-						</div>
-
-						<Slider @click="onClickSlider(m)" v-model="n.radius" :max="20000" class="slider" :step="10" />
-						<div @click="onClickPoint(n)">
-							<button @click.stop="onDeleteMark(n.id)" class="red">Удалить</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
 	</div>
 </template>
 
@@ -61,14 +30,7 @@ export default {
 
 	data() {
 		return {
-			markers: [
-				//Тестовые точки
-				// { coord: [53.139974192679674, 102.94056083902736], radius: 8000, selected: false },
-				// { coord: [53.16061539709935, 103.32301970466995], radius: 9000, selected: false },
-				// { coord: [53.17299436751333, 103.58257170662306], radius: 5000, selected: false },
-				// { coord: [52.9952193919426, 103.16371794685745], radius: 11000, selected: false },
-				// { coord: [53.020897593400555, 103.66908904060745], radius: 8000, selected: false },
-			].map((n, i) => ({ ...n, id: i + 1 })),
+			markers: [].map((n, i) => ({ ...n, id: i + 1 })),
 			controls: ["rulerControl", "zoomControl", "searchControl", "geolocationControl", "typeSelector", "fullscreenControl"],
 			zoom: 11,
 			settings: {
@@ -78,6 +40,7 @@ export default {
 				enterprise: false,
 				version: "2.1",
 			},
+			behaviors: ["scrollZoom"],
 			map: null,
 			long: null,
 			lat: null,
@@ -90,7 +53,7 @@ export default {
 		var geolocation = ymaps.geolocation;
 		geolocation
 			.get({
-				provider: "auto",
+				provider: "yandex",
 			})
 			.then((result) => {
 				const [long, lat] = result.geoObjects.position;
@@ -106,8 +69,10 @@ export default {
 	methods: {
 		templateBalloon(mark) {
 			return `
-                <p><strong>Координаты</strong>: ${mark.coord}</p>
-                <p><strong>Радиус</strong>: ${mark.radius}</p>
+                <p><strong>Координаты</strong>:<input type="text" value="${mark.getCoordinates()[0]}"><input type="text" value="${
+				mark.getCoordinates()[1]
+			}"></p>
+                 <p><strong>Радиус</strong>: <input type="text" value="${mark.getRadius()}"></p>
             `;
 		},
 
@@ -121,40 +86,29 @@ export default {
 			}, 10);
 		},
 
-		onClickPoint(m) {
-			this.$refs.map.myMap.balloon.open(m.coord, this.templateBalloon(m));
-			setTimeout(() => {
-				this.$refs.map.myMap.setCenter(m.coord, 10);
-			}, 100);
-
-			document.getElementById(m.id).scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-
-			this.markers = this.markers.map((el) => (el.selected == true ? { ...el, selected: false } : el));
-			m.selected = true;
-
-			this.long = m.coord[0];
-			this.lat = m.coord[1];
-		},
-
-		onClickSlider(m) {
-			this.long = m.coord[0];
-			this.lat = m.coord[1];
+		onEditPoint(e) {
+			e.get("target").editor.startEditing();
 
 			setTimeout(() => {
-				this.$refs.map.myMap.setCenter(m.coord, 10);
-			}, 100);
+				this.$refs.map.myMap.balloon.close(e.get("target").geometry.getCoordinates(), this.templateBalloon(e.get("target").geometry));
+			}, 10);
 		},
 
-		onDeleteMark(id) {
-			this.markers = this.markers.filter((obj) => obj.id !== id);
-			console.log(this.markers);
-			this.$refs.map.myMap.balloon.close();
+		onClickPoint(e) {
+			this.$refs.map.myMap.balloon.open(e.get("target").geometry.getCoordinates(), this.templateBalloon(e.get("target").geometry));
+		},
+
+		onRemovePoint(e) {
+			var myCollection = new ymaps.GeoObjectCollection();
+			myCollection.add(e.get("target"));
+			myCollection.removeAll();
+            setTimeout(() => {
+				this.$refs.map.myMap.balloon.close(e.get("target").geometry.getCoordinates(), this.templateBalloon(e.get("target").geometry));
+			}, 10);
 		},
 	},
 };
 </script>
-
-<style src="@vueform/slider/themes/default.css"></style>
 
 <style>
 #app {
@@ -199,6 +153,7 @@ input {
 	border-radius: 4px;
 	outline-color: rgb(84 105 212 / 0.5);
 	background-color: rgb(255, 255, 255);
+	margin-left: 2px;
 }
 
 .ymap-container {
@@ -240,9 +195,7 @@ button {
 	font-weight: bold;
 	font-size: 9pt;
 	outline: none;
-	margin-top: 20px;
-	margin-bottom: 10px;
-	margin-left: 65%;
+	margin-left: 70%;
 }
 
 button:hover {
