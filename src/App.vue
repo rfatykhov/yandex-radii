@@ -1,6 +1,6 @@
 <template>
 	<div id="app">
-		<yandex-map ref="map" :coords="[long, lat]" @click="onClickMap" :controls="controls" :zoom="zoom" class="map" :settings="settings" :behaviors="behaviors">
+		<yandex-map ref="map" :coords="[long, lat]" @click="onClickMap" :controls="controls" :zoom="zoom" class="map" :settings="settings">
 			<ymap-marker
 				v-for="n in markers"
 				:key="n.id"
@@ -40,7 +40,6 @@ export default {
 				enterprise: false,
 				version: "2.1",
 			},
-			behaviors: ["scrollZoom"],
 			map: null,
 			long: null,
 			lat: null,
